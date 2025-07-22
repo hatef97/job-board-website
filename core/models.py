@@ -19,4 +19,32 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         return self.create_user(email, password, **extra_fields)
+
+
+
+class User(AbstractBaseUser, PermissionsMixin):
+    ROLE_CHOICES = (
+        ('employer', 'Employer'),
+        ('applicant', 'Applicant'),
+    )
+
+    email = models.EmailField(unique=True)
+    username = models.CharField(max_length=150, blank=True)
+    first_name = models.CharField(max_length=150, blank=True)
+    last_name = models.CharField(max_length=150, blank=True)
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = UserManager()
+
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = []
+
+    def __str__(self):
+        return f"{self.email} ({self.role})"
         
