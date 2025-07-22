@@ -48,6 +48,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return f"{self.email} ({self.role})"
 
+    def get_full_name(self):
+        return f"{self.first_name} {self.last_name}".strip()    
+
 
 
 class EmployerProfile(models.Model):
@@ -70,4 +73,3 @@ class ApplicantProfile(models.Model):
 
     def __str__(self):
         return f"{self.user.get_full_name() or self.user.email}'s Profile"
-        

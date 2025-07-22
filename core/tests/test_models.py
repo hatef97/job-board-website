@@ -1,8 +1,9 @@
 from django.test import TestCase
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from django.core.files.uploadedfile import SimpleUploadedFile
 
-from core.models import User, EmployerProfile
+from core.models import User, EmployerProfile, ApplicantProfile
 
 
 
@@ -185,3 +186,67 @@ class EmployerProfileModelTests(TestCase):
         )
         now = timezone.now()
         self.assertLessEqual(profile.created_at, now)
+
+
+
+class ApplicantProfileModelTests(TestCase):
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email='applicant@example.com',
+            password='strongpass',
+            role='applicant',
+            first_name='Ali',
+            last_name='Amini'
+        )
+
+    def test_create_applicant_profile(self):
+        profile = ApplicantProfile.objects.create(
+            user=self.user,
+            bio="Experienced Python developer.",
+        )
+        self.assertEqual(profile.user, self.user)
+        self.assertEqual(profile.bio, "Experienced Python developer.")
+        self.assertIsNone(profile.resume.name)
+        self.assertIsNotNone(profile.created_at)
+
+
+    def test_optional_fields_can_be_blank(self):
+        profile = ApplicantProfile.objects.create(
+            user=self.user
+        )
+        self.assertIsNone(profile.resume.name)
+        self.assertIsNone(profile.bio)
+
+
+    def test_resume_file_upload(self):
+        resume_file = SimpleUploadedFile("resume.pdf", b"PDF file content")
+        profile = ApplicantProfile.objects.create(
+            user=self.user,
+            resume=resume_file
+        )
+        self.assertTrue(profile.resume.name.startswith('resumes/resume'))
+
+
+    def test_string_representation(self):
+        profile = ApplicantProfile.objects.create(user=self.user)
+        self.assertEqual(str(profile), "Ali Amini's Profile")
+
+
+    def test_fallback_to_email_when_no_name(self):
+        self.user.first_name = ''
+        self.user.last_name = ''
+        self.user.save()
+        profile = ApplicantProfile.objects.create(user=self.user)
+        self.assertEqual(str(profile), "applicant@example.com's Profile")
+
+
+    def test_profile_deletes_with_user(self):
+        profile = ApplicantProfile.objects.create(user=self.user)
+        self.user.delete()
+        self.assertFalse(ApplicantProfile.objects.filter(pk=profile.pk).exists())
+
+
+    def test_created_at_timestamp_set(self):
+        profile = ApplicantProfile.objects.create(user=self.user)
+        self.assertLessEqual(profile.created_at, timezone.now())
