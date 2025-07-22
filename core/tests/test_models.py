@@ -1,7 +1,8 @@
 from django.test import TestCase
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
-from core.models import User
+from core.models import User, EmployerProfile
 
 
 
@@ -128,3 +129,59 @@ class UserModelTests(TestCase):
         )
         self.assertIsNotNone(user.created_at)
         self.assertIsNotNone(user.updated_at)
+
+
+
+class EmployerProfileModelTests(TestCase):
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email='employer@example.com',
+            password='securepass',
+            role='employer'
+        )
+
+    def test_create_employer_profile(self):
+        profile = EmployerProfile.objects.create(
+            user=self.user,
+            company_name="Test Company",
+            company_website="https://testcompany.com",
+            company_description="We do testing."
+        )
+        self.assertEqual(profile.user, self.user)
+        self.assertEqual(profile.company_name, "Test Company")
+        self.assertEqual(profile.company_website, "https://testcompany.com")
+        self.assertEqual(profile.company_description, "We do testing.")
+        self.assertIsNotNone(profile.created_at)
+
+    def test_company_website_and_description_optional(self):
+        profile = EmployerProfile.objects.create(
+            user=self.user,
+            company_name="No URL Inc"
+        )
+        self.assertEqual(profile.company_name, "No URL Inc")
+        self.assertIsNone(profile.company_website)
+        self.assertIsNone(profile.company_description)
+
+    def test_string_representation(self):
+        profile = EmployerProfile.objects.create(
+            user=self.user,
+            company_name="Represent Inc"
+        )
+        self.assertEqual(str(profile), "Represent Inc")
+
+    def test_profile_deletes_when_user_deletes(self):
+        profile = EmployerProfile.objects.create(
+            user=self.user,
+            company_name="Cascade Co."
+        )
+        self.user.delete()
+        self.assertFalse(EmployerProfile.objects.filter(company_name="Cascade Co.").exists())
+
+    def test_created_at_auto_set(self):
+        profile = EmployerProfile.objects.create(
+            user=self.user,
+            company_name="TimeStamped Ltd"
+        )
+        now = timezone.now()
+        self.assertLessEqual(profile.created_at, now)
