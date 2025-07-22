@@ -59,4 +59,15 @@ class EmployerProfile(models.Model):
 
     def __str__(self):
         return self.company_name
+
+
+
+class ApplicantProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='applicant_profile')
+    resume = models.FileField(upload_to='resumes/', blank=True, null=True)
+    bio = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"{self.user.get_full_name() or self.user.email}'s Profile"
         
