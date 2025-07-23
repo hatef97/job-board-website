@@ -36,3 +36,20 @@ class UserSerializer(serializers.ModelSerializer):
             instance.set_password(password)
         instance.save()
         return instance
+
+
+
+# -------------------------
+# Employer Profile Serializer
+# -------------------------
+class EmployerProfileSerializer(serializers.ModelSerializer):
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = EmployerProfile
+        fields = [
+            'id', 'user', 'company_name', 'company_website',
+            'company_description', 'created_at'
+        ]
+        read_only_fields = ['created_at']
+        
