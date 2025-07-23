@@ -1,8 +1,9 @@
 from django.test import TestCase
 from django.utils import timezone
+from django.core.files.uploadedfile import SimpleUploadedFile
 
-from core.serializers import UserSerializer, EmployerProfileSerializer
-from core.models import User, EmployerProfile
+from core.serializers import UserSerializer, EmployerProfileSerializer, ApplicantProfileSerializer
+from core.models import User, EmployerProfile, ApplicantProfile
 
 
 
@@ -150,5 +151,77 @@ class EmployerProfileSerializerTests(TestCase):
         }
         serializer = EmployerProfileSerializer(data=data)
         self.assertTrue(serializer.is_valid(), serializer.errors)
+        profile = serializer.save(user=self.user)
+        self.assertEqual(profile.user, self.user)
+
+
+
+class ApplicantProfileSerializerTests(TestCase):
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email='applicant@example.com',
+            password='securepass',
+            role='applicant'
+        )
+
+
+    def test_applicant_profile_with_resume(self):
+        resume_file = SimpleUploadedFile("cv.pdf", b"dummy content", content_type="application/pdf")
+        data = {
+            'bio': 'Experienced developer.',
+            'resume': resume_file,
+        }
+        serializer = ApplicantProfileSerializer(data=data)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+        profile = serializer.save(user=self.user)
+        self.assertEqual(profile.user, self.user)
+        self.assertEqual(profile.bio, 'Experienced developer.')
+        self.assertTrue(profile.resume.name.startswith('resumes/cv'))
+
+
+    def test_applicant_profile_without_resume(self):
+        data = {
+            'bio': 'No file uploaded.',
+        }
+        serializer = ApplicantProfileSerializer(data=data)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+        profile = serializer.save(user=self.user)
+        self.assertEqual(profile.bio, 'No file uploaded.')
+        self.assertFalse(profile.resume)
+
+
+    def test_resume_can_be_null(self):
+        data = {
+            'bio': 'Bio with null resume',
+            'resume': None
+        }
+        serializer = ApplicantProfileSerializer(data=data)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        profile = serializer.save(user=self.user)
+        self.assertIsNone(profile.resume.name)
+
+
+    def test_created_at_is_read_only(self):
+        now = timezone.now()
+        data = {
+            'bio': 'Testing created_at',
+            'created_at': now  # Attempt to override
+        }
+        serializer = ApplicantProfileSerializer(data=data)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        profile = serializer.save(user=self.user)
+        self.assertNotEqual(profile.created_at.isoformat(), now.isoformat())
+
+
+    def test_user_field_is_read_only(self):
+        data = {
+            'bio': 'Injected user id',
+            'user': 9999  # Should be ignored
+        }
+        serializer = ApplicantProfileSerializer(data=data)
+        self.assertTrue(serializer.is_valid())
         profile = serializer.save(user=self.user)
         self.assertEqual(profile.user, self.user)
