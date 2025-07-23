@@ -51,3 +51,13 @@ class UserAdmin(BaseUserAdmin):
         if obj is None:
             return []
         return [EmployerProfileInline] if obj.role == 'employer' else [ApplicantProfileInline]
+
+
+
+# Employer Profile Admin
+@admin.register(EmployerProfile)
+class EmployerProfileAdmin(admin.ModelAdmin):
+    list_display = ('company_name', 'user', 'company_website', 'created_at')
+    search_fields = ('company_name', 'user__email')
+    readonly_fields = ('created_at',)
+    
