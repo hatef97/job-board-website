@@ -60,4 +60,13 @@ class EmployerProfileAdmin(admin.ModelAdmin):
     list_display = ('company_name', 'user', 'company_website', 'created_at')
     search_fields = ('company_name', 'user__email')
     readonly_fields = ('created_at',)
+
+
+
+# Applicant Profile Admin
+@admin.register(ApplicantProfile)
+class ApplicantProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'created_at')
+    search_fields = ('user__email', 'user__first_name', 'user__last_name')
+    readonly_fields = ('created_at',)
     
