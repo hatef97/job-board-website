@@ -52,4 +52,20 @@ class EmployerProfileSerializer(serializers.ModelSerializer):
             'company_description', 'created_at'
         ]
         read_only_fields = ['created_at']
+
+
+
+# -------------------------
+# Applicant Profile Serializer
+# -------------------------
+class ApplicantProfileSerializer(serializers.ModelSerializer):
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
+    resume = serializers.FileField(required=False, allow_null=True)
+
+    class Meta:
+        model = ApplicantProfile
+        fields = [
+            'id', 'user', 'resume', 'bio', 'created_at'
+        ]
+        read_only_fields = ['created_at']
         
