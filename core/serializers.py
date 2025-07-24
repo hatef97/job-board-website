@@ -11,7 +11,7 @@ from core.models import User, EmployerProfile, ApplicantProfile
 # -------------------------
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)
-    role = serializers.ChoiceField(choices=User.ROLE_CHOICES)
+    role = serializers.ChoiceField(choices=User.ROLE_CHOICES, required=False)
 
     class Meta:
         model = User
@@ -29,6 +29,14 @@ class UserSerializer(serializers.ModelSerializer):
         return user
 
     def update(self, instance, validated_data):
+        request = self.context.get('request')
+
+        # 🔐 Non-admins can't change sensitive fields
+        restricted_fields = ['email', 'role', 'is_staff', 'is_superuser']
+        if not request or not getattr(request.user, 'is_staff', False):
+            for field in restricted_fields:
+                validated_data.pop(field, None)        
+        
         password = validated_data.pop('password', None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)

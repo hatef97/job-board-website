@@ -44,6 +44,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     # Third-party apps
     'rest_framework',
+    'rest_framework.authtoken',
+    'djoser',
     # My apps
     'core',
 ]
@@ -142,4 +144,14 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ),
+}
+
+DJOSER = {
+    'LOGIN_FIELD': 'email',
+    'USER_CREATE_PASSWORD_RETYPE': True,
+    'SERIALIZERS': {
+        'user_create': 'core.serializers.UserSerializer',
+        'user': 'core.serializers.UserSerializer',
+        'current_user': 'core.serializers.UserSerializer',
+    }
 }
