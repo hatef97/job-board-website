@@ -88,7 +88,7 @@ class ApplicantProfileViewSet(viewsets.ModelViewSet):
     - Admins can access all.
     """
     serializer_class = ApplicantProfileSerializer
-    permission_classes = [permissions.IsAuthenticated, IsOwnerOrAdmin]
+    permission_classes = [permissions.IsAuthenticated, IsAdminOrSelf]
 
     def get_queryset(self):
         user = self.request.user
@@ -105,4 +105,3 @@ class ApplicantProfileViewSet(viewsets.ModelViewSet):
         if not self.request.user.is_staff and serializer.instance.user != self.request.user:
             raise PermissionDenied("You do not have permission to update this profile.")
         serializer.save()
-        
