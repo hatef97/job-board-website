@@ -5,8 +5,8 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.views import APIView
 from rest_framework.exceptions import PermissionDenied
 
-from core.models import User, EmployerProfile
-from core.serializers import UserSerializer, EmployerProfileSerializer
+from core.models import User, EmployerProfile, ApplicantProfile
+from core.serializers import UserSerializer, EmployerProfileSerializer, ApplicantProfileSerializer
 from core.permissions import IsAdminOrSelf  
 
 
@@ -78,3 +78,31 @@ class EmployerProfileViewSet(viewsets.ModelViewSet):
         if not self.request.user.is_staff and serializer.instance.user != self.request.user:
             raise PermissionDenied("You do not have permission to update this profile.")
         serializer.save()
+
+
+
+class ApplicantProfileViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing applicant profiles.
+    - Applicants can manage their own profile.
+    - Admins can access all.
+    """
+    serializer_class = ApplicantProfileSerializer
+    permission_classes = [permissions.IsAuthenticated, IsOwnerOrAdmin]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff:
+            return ApplicantProfile.objects.all()
+        return ApplicantProfile.objects.filter(user=user)
+
+    def perform_create(self, serializer):
+        if self.request.user.role != 'applicant':
+            raise PermissionDenied("Only users with the 'applicant' role can create applicant profiles.")
+        serializer.save(user=self.request.user)
+
+    def perform_update(self, serializer):
+        if not self.request.user.is_staff and serializer.instance.user != self.request.user:
+            raise PermissionDenied("You do not have permission to update this profile.")
+        serializer.save()
+        
