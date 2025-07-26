@@ -3,9 +3,10 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.views import APIView
+from rest_framework.exceptions import PermissionDenied
 
-from core.models import User
-from core.serializers import UserSerializer
+from core.models import User, EmployerProfile
+from core.serializers import UserSerializer, EmployerProfileSerializer
 from core.permissions import IsAdminOrSelf  
 
 
@@ -50,3 +51,30 @@ class UserViewSet(viewsets.ModelViewSet):
         """Get current user profile (optional; Djoser already provides /auth/users/me/)"""
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)
+
+
+
+class EmployerProfileViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet to manage Employer profiles.
+    - Employers can view/update their own profile.
+    - Admins can access all profiles.
+    """
+    serializer_class = EmployerProfileSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAdminOrSelf]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff:
+            return EmployerProfile.objects.all()
+        return EmployerProfile.objects.filter(user=user)
+
+    def perform_create(self, serializer):
+        if not self.request.user.role == 'employer':
+            raise PermissionDenied("Only users with the 'employer' role can create an employer profile.")
+        serializer.save(user=self.request.user)
+
+    def perform_update(self, serializer):
+        if not self.request.user.is_staff and serializer.instance.user != self.request.user:
+            raise PermissionDenied("You do not have permission to update this profile.")
+        serializer.save()
