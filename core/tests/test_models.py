@@ -141,6 +141,9 @@ class EmployerProfileModelTests(TestCase):
             password='securepass',
             role='employer'
         )
+        
+        EmployerProfile.objects.filter(user=self.user).delete()
+
 
     def test_create_employer_profile(self):
         profile = EmployerProfile.objects.create(
@@ -155,6 +158,7 @@ class EmployerProfileModelTests(TestCase):
         self.assertEqual(profile.company_description, "We do testing.")
         self.assertIsNotNone(profile.created_at)
 
+
     def test_company_website_and_description_optional(self):
         profile = EmployerProfile.objects.create(
             user=self.user,
@@ -164,12 +168,14 @@ class EmployerProfileModelTests(TestCase):
         self.assertIsNone(profile.company_website)
         self.assertIsNone(profile.company_description)
 
+
     def test_string_representation(self):
         profile = EmployerProfile.objects.create(
             user=self.user,
             company_name="Represent Inc"
         )
         self.assertEqual(str(profile), "Represent Inc")
+
 
     def test_profile_deletes_when_user_deletes(self):
         profile = EmployerProfile.objects.create(
@@ -178,6 +184,7 @@ class EmployerProfileModelTests(TestCase):
         )
         self.user.delete()
         self.assertFalse(EmployerProfile.objects.filter(company_name="Cascade Co.").exists())
+
 
     def test_created_at_auto_set(self):
         profile = EmployerProfile.objects.create(
@@ -199,6 +206,8 @@ class ApplicantProfileModelTests(TestCase):
             first_name='Ali',
             last_name='Amini'
         )
+
+        ApplicantProfile.objects.filter(user=self.user).delete()
 
     def test_create_applicant_profile(self):
         profile = ApplicantProfile.objects.create(

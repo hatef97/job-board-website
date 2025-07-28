@@ -24,3 +24,5 @@ media/
 # Ignore Django secret key and config files
 config/settings/local.py
 .env
+
+resumes
