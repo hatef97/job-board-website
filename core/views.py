@@ -88,7 +88,7 @@ class ApplicantProfileViewSet(viewsets.ModelViewSet):
     - Admins can access all.
     """
     serializer_class = ApplicantProfileSerializer
-    permission_classes = [permissions.IsAuthenticated, IsAdminOrSelf]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user

@@ -84,4 +84,12 @@ class ApplicantProfileSerializer(serializers.ModelSerializer):
             'id', 'user', 'resume', 'bio', 'created_at'
         ]
         read_only_fields = ['created_at']
-        
+
+    def validate(self, attrs):
+        # forbid any incoming created_at
+        if 'created_at' in self.initial_data:
+            raise serializers.ValidationError({
+                'created_at': 'This field is read-only.'
+            })
+        return super().validate(attrs)
+                
