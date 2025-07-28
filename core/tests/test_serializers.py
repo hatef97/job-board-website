@@ -90,6 +90,8 @@ class EmployerProfileSerializerTests(TestCase):
             role='employer'
         )
 
+        EmployerProfile.objects.filter(user=self.user).delete()
+
 
     def test_employer_profile_serializer_valid_data(self):
         data = {
@@ -136,12 +138,11 @@ class EmployerProfileSerializerTests(TestCase):
             'company_name': 'FakeTime Inc',
             'company_website': 'https://faketime.com',
             'company_description': 'Time travel biz',
-            'created_at': now  # trying to override
+            'created_at': now.isoformat()
         }
         serializer = EmployerProfileSerializer(data=data)
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-        profile = serializer.save(user=self.user)
-        self.assertNotEqual(profile.created_at, now)  # Should not match
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('created_at', serializer.errors)
 
 
     def test_user_field_is_read_only(self):
@@ -164,6 +165,8 @@ class ApplicantProfileSerializerTests(TestCase):
             password='securepass',
             role='applicant'
         )
+
+        ApplicantProfile.objects.filter(user=self.user).delete()
 
 
     def test_applicant_profile_with_resume(self):
@@ -205,15 +208,15 @@ class ApplicantProfileSerializerTests(TestCase):
 
 
     def test_created_at_is_read_only(self):
-        now = timezone.now()
+        now = timezone.now().isoformat()
         data = {
             'bio': 'Testing created_at',
             'created_at': now  # Attempt to override
         }
         serializer = ApplicantProfileSerializer(data=data)
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-        profile = serializer.save(user=self.user)
-        self.assertNotEqual(profile.created_at.isoformat(), now.isoformat())
+        # It should reject any incoming created_at
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('created_at', serializer.errors)
 
 
     def test_user_field_is_read_only(self):
