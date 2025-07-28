@@ -61,6 +61,14 @@ class EmployerProfileSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['created_at']
 
+    def validate(self, attrs):
+        # If the client tried to set created_at, error out
+        if 'created_at' in self.initial_data:
+            raise serializers.ValidationError({
+                'created_at': 'This field is read-only.'
+            })
+        return super().validate(attrs)
+
 
 
 # -------------------------

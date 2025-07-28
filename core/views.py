@@ -61,7 +61,7 @@ class EmployerProfileViewSet(viewsets.ModelViewSet):
     - Admins can access all profiles.
     """
     serializer_class = EmployerProfileSerializer
-    permission_classes = [permissions.IsAuthenticated, IsAdminOrSelf]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
