@@ -1,8 +1,8 @@
 from django.test import TestCase
 from django.core.exceptions import ValidationError
 
-from jobs.models import Category, Tag
-
+from jobs.models import Category, Tag, CompanyProfile
+from core.models import User
 
 
 class CategoryModelTests(TestCase):
@@ -64,3 +64,54 @@ class TagModelTests(TestCase):
         tag = Tag(name=long_name)
         with self.assertRaises(ValidationError):
             tag.full_clean()  # triggers max_length validation
+
+
+
+class CompanyProfileModelTests(TestCase):
+
+    def setUp(self):
+        self.user = User.objects.create_user(email='employer@test.com', password='securepass', role='employer')
+
+
+    def test_str_representation(self):
+        """✅ __str__ should return company_name."""
+        profile = CompanyProfile.objects.create(
+            user=self.user,
+            company_name="Django Inc.",
+            location="New York"
+        )
+        self.assertEqual(str(profile), "Django Inc.")
+
+
+    def test_one_to_one_user_link(self):
+        """✅ Each user can have only one CompanyProfile."""
+        CompanyProfile.objects.create(
+            user=self.user,
+            company_name="TechWorld",
+            location="San Francisco"
+        )
+        with self.assertRaises(Exception):
+            CompanyProfile.objects.create(
+                user=self.user,
+                company_name="DuplicateCo",
+                location="LA"
+            )
+
+
+    def test_blank_optional_fields(self):
+        """✅ Optional fields can be blank."""
+        profile = CompanyProfile.objects.create(
+            user=self.user,
+            company_name="Optional Fields Test",
+            location="Tehran"
+        )
+        self.assertEqual(profile.website, "")
+        self.assertFalse(profile.logo)
+        self.assertEqual(profile.description, "")
+
+
+    def test_required_fields_validation(self):
+        """✅ company_name and location are required."""
+        profile = CompanyProfile(user=self.user)
+        with self.assertRaises(ValidationError):
+            profile.full_clean()  # This checks required fields before saving
