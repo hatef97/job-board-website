@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.core.exceptions import ValidationError
 
-from jobs.models import Category
+from jobs.models import Category, Tag
 
 
 
@@ -38,3 +38,29 @@ class CategoryModelTests(TestCase):
         """✅ Slug generation strips special characters and spaces."""
         category = Category.objects.create(name="AI & Robotics 💡")
         self.assertEqual(category.slug, "ai-robotics")
+
+
+
+class TagModelTests(TestCase):
+
+
+    def test_str_representation(self):
+        """✅ __str__ returns the tag name."""
+        tag = Tag.objects.create(name="Python")
+        self.assertEqual(str(tag), "Python")
+
+
+    def test_name_uniqueness(self):
+        """✅ Tag name must be unique."""
+        Tag.objects.create(name="Remote")
+        duplicate = Tag(name="Remote")
+        with self.assertRaises(ValidationError):
+            duplicate.full_clean()  # triggers uniqueness validation
+
+
+    def test_name_max_length(self):
+        """✅ Tag name must not exceed 50 characters."""
+        long_name = "x" * 51
+        tag = Tag(name=long_name)
+        with self.assertRaises(ValidationError):
+            tag.full_clean()  # triggers max_length validation
