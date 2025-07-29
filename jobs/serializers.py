@@ -14,3 +14,14 @@ class CategorySerializer(serializers.ModelSerializer):
         model = Category
         fields = ['id', 'name', 'slug']
         read_only_fields = ['slug']
+
+
+
+# ==========================
+# TAG
+# ==========================
+
+class TagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        fields = ['id', 'name']
