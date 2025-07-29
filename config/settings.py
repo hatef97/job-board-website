@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'djoser',
     # My apps
     'core',
+    'jobs',
 ]
 
 MIDDLEWARE = [
