@@ -26,3 +26,4 @@ config/settings/local.py
 .env
 
 resumes
+company_logos
