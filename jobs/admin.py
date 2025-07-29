@@ -35,4 +35,31 @@ class CompanyProfileAdmin(admin.ModelAdmin):
         return "-"
     logo_preview.allow_tags = True
     logo_preview.short_description = "Logo Preview"
+
+
+
+@admin.register(Job)
+class JobAdmin(admin.ModelAdmin):
+    list_display = ('title', 'employer', 'category', 'location', 'job_type', 'experience_level', 'is_active', 'created_at')
+    list_filter = ('job_type', 'experience_level', 'is_active', 'category', 'tags')
+    search_fields = ('title', 'description', 'location', 'employer__email')
+    autocomplete_fields = ('employer', 'category', 'tags')
+    filter_horizontal = ('tags',)
+    date_hierarchy = 'created_at'
+    readonly_fields = ('created_at', 'updated_at')
+    fieldsets = (
+        (None, {
+            'fields': ('title', 'employer', 'description', 'requirements')
+        }),
+        ('Job Details', {
+            'fields': (
+                'location', 'job_type', 'experience_level',
+                ('salary_min', 'salary_max'),
+                'category', 'tags', 'deadline', 'is_active'
+            )
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at')
+        }),
+    )
     
