@@ -48,3 +48,22 @@ class CompanyProfileSerializer(serializers.ModelSerializer):
         if obj.logo and request:
             return request.build_absolute_uri(obj.logo.url)
         return None
+
+
+
+# ==========================
+# JOB
+# ==========================
+
+class JobListSerializer(serializers.ModelSerializer):
+    employer_email = serializers.EmailField(source='employer.email', read_only=True)
+    category = CategorySerializer(read_only=True)
+    tags = TagSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Job
+        fields = [
+            'id', 'title', 'location', 'job_type', 'experience_level',
+            'salary_min', 'salary_max', 'category', 'tags',
+            'deadline', 'is_active', 'created_at', 'employer_email'
+        ]
