@@ -52,4 +52,21 @@ class Tag(models.Model):
 
     def __str__(self):
         return self.name
+
+
+
+# ==========================
+# COMPANY PROFILE MODEL
+# ==========================
+
+class CompanyProfile(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    company_name = models.CharField(max_length=255)
+    website = models.URLField(blank=True)
+    logo = models.ImageField(upload_to='company_logos/', blank=True)
+    location = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+
+    def __str__(self):
+        return self.company_name
         
