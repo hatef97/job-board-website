@@ -102,3 +102,99 @@ class TagViewSetTests(APITestCase):
         """✅ Unauthenticated users should access tag detail."""
         response = self.client.get(self.detail_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+
+class CompanyProfileViewSetTests(APITestCase):
+
+    def setUp(self):
+        self.employer = User.objects.create_user(email="employer@test.com", password="password123", role="employer")
+        self.applicant = User.objects.create_user(email="applicant@test.com", password="password123", role="applicant")
+
+        self.profile = CompanyProfile.objects.create(
+            user=self.employer,
+            company_name="BirdTech",
+            location="Berlin",
+            description="We build smart birdhouses."
+        )
+
+        self.list_url = reverse("company-profile-list")
+        self.detail_url = reverse("company-profile-detail", kwargs={"pk": self.profile.pk})
+
+
+    def test_employer_can_list_own_profile(self):
+        """✅ Employers can list only their own company profile."""
+        self.client.force_authenticate(user=self.employer)
+        response = self.client.get(self.list_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["company_name"], "BirdTech")
+
+
+    def test_employer_can_retrieve_own_profile(self):
+        """✅ Employers can retrieve their own profile."""
+        self.client.force_authenticate(user=self.employer)
+        response = self.client.get(self.detail_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["company_name"], "BirdTech")
+
+
+    def test_applicant_cannot_access_profiles(self):
+        """❌ Applicants should not access company profiles."""
+        self.client.force_authenticate(user=self.applicant)
+        response = self.client.get(self.list_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+    def test_anonymous_user_cannot_access_profiles(self):
+        """❌ Anonymous users should be rejected."""
+        response = self.client.get(self.list_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+    def test_employer_can_create_profile(self):
+        """✅ Employers can create their own profile."""
+        new_employer = User.objects.create_user(
+            email="newemployer@test.com", password="pass123", role="employer"
+        )
+        self.client.force_authenticate(user=new_employer)
+
+        payload = {
+            "company_name": "FeatherSoft",
+            "location": "London",
+            "description": "Bird-loving AI company"
+        }
+
+        response = self.client.post(self.list_url, payload)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["company_name"], "FeatherSoft")
+        self.assertEqual(response.data["user_email"], new_employer.email)
+
+
+    def test_applicant_cannot_create_profile(self):
+        """❌ Applicants should not be allowed to create profiles."""
+        self.client.force_authenticate(user=self.applicant)
+
+        payload = {
+            "company_name": "WrongRole Inc",
+            "location": "Nowhere",
+            "description": "Not allowed"
+        }
+
+        response = self.client.post(self.list_url, payload)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+    def test_employer_cannot_create_multiple_profiles(self):
+        """❌ Employer cannot create a second company profile."""
+        self.client.force_authenticate(user=self.employer)
+
+        payload = {
+            "company_name": "AnotherCo",
+            "location": "Paris",
+            "description": "Duplicate test"
+        }
+
+        response = self.client.post(self.list_url, payload)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        

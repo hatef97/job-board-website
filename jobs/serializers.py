@@ -35,13 +35,15 @@ class TagSerializer(serializers.ModelSerializer):
 class CompanyProfileSerializer(serializers.ModelSerializer):
     user_email = serializers.EmailField(source='user.email', read_only=True)
     logo_url = serializers.SerializerMethodField()
-
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
+    
     class Meta:
         model = CompanyProfile
         fields = [
             'id', 'user', 'user_email', 'company_name', 'website',
             'logo', 'logo_url', 'location', 'description'
         ]
+        read_only_fields = ['user']
 
     def get_logo_url(self, obj):
         request = self.context.get('request')

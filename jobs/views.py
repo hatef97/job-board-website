@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, permissions, mixins
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import ValidationError
 
 from .models import *
 from .serializers import *
@@ -40,6 +41,8 @@ class CompanyProfileViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         if self.request.user.role != 'employer':
             raise PermissionDenied("Only employers can create a company profile.")
+        if CompanyProfile.objects.filter(user=self.request.user).exists():
+            raise ValidationError("You already have a company profile.")
         serializer.save(user=self.request.user)
 
 
