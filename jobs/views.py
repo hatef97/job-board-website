@@ -4,6 +4,7 @@ from rest_framework import viewsets, permissions, mixins
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.exceptions import ValidationError
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
 from .models import *
 from .serializers import *
@@ -49,7 +50,7 @@ class CompanyProfileViewSet(viewsets.ModelViewSet):
 
 class JobViewSet(viewsets.ModelViewSet):
     queryset = Job.objects.select_related("employer", "category").prefetch_related("tags").all()
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get_serializer_class(self):
         if self.action in ['list']:

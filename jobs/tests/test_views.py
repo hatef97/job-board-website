@@ -1,3 +1,6 @@
+from datetime import date
+from decimal import Decimal
+
 from django.urls import reverse
 
 from rest_framework.test import APITestCase
@@ -5,6 +8,7 @@ from rest_framework import status
 
 from jobs.models import *
 from jobs.serializers import *
+from core.models import User
 
 
 
@@ -197,4 +201,134 @@ class CompanyProfileViewSetTests(APITestCase):
 
         response = self.client.post(self.list_url, payload)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        
+
+
+
+class JobViewSetTests(APITestCase):
+
+    def setUp(self):
+        self.employer = User.objects.create_user(
+            email="employer@test.com", password="pass123", role="employer"
+        )
+        self.applicant = User.objects.create_user(
+            email="applicant@test.com", password="pass123", role="applicant"
+        )
+        self.category = Category.objects.create(name="Engineering")
+        self.tag1 = Tag.objects.create(name="Remote")
+        self.tag2 = Tag.objects.create(name="Python")
+
+        self.job = Job.objects.create(
+            employer=self.employer,
+            title="Senior Backend Developer",
+            description="Build APIs",
+            requirements="Python, DRF",
+            location="Remote",
+            job_type="full_time",
+            experience_level="senior",
+            salary_min=Decimal("5000.00"),
+            salary_max=Decimal("9000.00"),
+            category=self.category,
+            deadline=date.today(),
+            is_active=True
+        )
+        self.job.tags.set([self.tag1, self.tag2])
+
+        self.list_url = reverse("job-list")
+        self.detail_url = reverse("job-detail", kwargs={"pk": self.job.pk})
+
+
+    def test_public_can_list_active_jobs(self):
+        """✅ Unauthenticated users can list active jobs."""
+        response = self.client.get(self.list_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["title"], "Senior Backend Developer")
+
+
+    def test_employer_can_create_job(self):
+        """✅ Employers can post a new job."""
+        self.client.force_authenticate(user=self.employer)
+
+        payload = {
+            "title": "API Developer",
+            "description": "Create RESTful endpoints",
+            "requirements": "Django, DRF",
+            "location": "Hybrid",
+            "job_type": "contract",
+            "experience_level": "mid",
+            "salary_min": "4000.00",
+            "salary_max": "7000.00",
+            "category_id": self.category.id,
+            "tag_ids": [self.tag1.id],
+            "deadline": str(date.today())
+        }
+
+        response = self.client.post(self.list_url, payload)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["title"], "API Developer")
+        self.assertEqual(response.data["employer_email"], self.employer.email)
+
+
+    def test_applicant_cannot_post_job(self):
+        """❌ Applicants should not be able to create jobs."""
+        self.client.force_authenticate(user=self.applicant)
+
+        payload = {
+            "title": "Unauthorized Job",
+            "description": "This should fail",
+            "location": "Nowhere",
+            "job_type": "remote",
+            "experience_level": "junior",
+            "category_id": self.category.id
+        }
+
+        response = self.client.post(self.list_url, payload)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+    def test_employer_sees_only_own_jobs(self):
+        """✅ Employer can only see jobs they created."""
+        self.client.force_authenticate(user=self.employer)
+        response = self.client.get(self.list_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        for job in response.data:
+            self.assertEqual(job["employer_email"], self.employer.email)
+
+
+    def test_applicant_cannot_create_job(self):
+        """❌ Applicants should not be able to create jobs (POST is forbidden)."""
+        self.client.force_authenticate(user=self.applicant)
+
+        payload = {
+            "title": "Unauthorized Post",
+            "description": "Should fail",
+            "location": "Remote",
+            "job_type": "remote",
+            "experience_level": "junior",
+            "category_id": self.category.id
+        }
+
+        response = self.client.post(self.list_url, payload)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+    def test_employer_can_retrieve_own_job(self):
+        """✅ Employer can retrieve detail of own job."""
+        self.client.force_authenticate(user=self.employer)
+        response = self.client.get(self.detail_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["title"], self.job.title)
+
+
+    def test_anonymous_user_can_retrieve_job(self):
+        """✅ Public user can view job detail if active."""
+        response = self.client.get(self.detail_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["title"], self.job.title)
+
+
+    def test_applicant_can_view_jobs(self):
+        """✅ Applicants should be allowed to view job listings."""
+        self.client.force_authenticate(user=self.applicant)
+        response = self.client.get(self.list_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
