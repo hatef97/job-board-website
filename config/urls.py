@@ -22,4 +22,5 @@ urlpatterns = [
     path('auth/', include('djoser.urls')),  # 👈 registration, activation, reset, etc.
     path('auth/', include('djoser.urls.authtoken')),  # 👈 login/logout using tokens
     path('core/', include('core.urls')),
+    path('jobs/', include('jobs.urls')),
 ]
