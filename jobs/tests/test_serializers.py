@@ -2,8 +2,8 @@ from django.test import TestCase
 
 from rest_framework.exceptions import ValidationError
 
-from jobs.models import Category
-from jobs.serializers import CategorySerializer
+from jobs.models import *
+from jobs.serializers import *
 from core.models import User
 
 
@@ -49,3 +49,43 @@ class CategorySerializerTests(TestCase):
         serializer = CategorySerializer(data=data)
         self.assertFalse(serializer.is_valid())
         self.assertIn('name', serializer.errors)
+
+
+
+class TagSerializerTests(TestCase):
+
+    def setUp(self):
+        self.tag = Tag.objects.create(name="Python")
+
+
+    def test_serialize_tag(self):
+        """✅ Serializing a Tag instance returns expected fields."""
+        serializer = TagSerializer(instance=self.tag)
+        data = serializer.data
+        self.assertEqual(data['id'], self.tag.id)
+        self.assertEqual(data['name'], "Python")
+
+
+    def test_deserialize_valid_data(self):
+        """✅ Valid data creates a new Tag instance."""
+        data = {"name": "Django"}
+        serializer = TagSerializer(data=data)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        tag = serializer.save()
+        self.assertEqual(tag.name, "Django")
+
+
+    def test_duplicate_name_not_allowed(self):
+        """✅ Duplicate tag names should raise a validation error."""
+        data = {"name": "Python"}
+        serializer = TagSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("name", serializer.errors)
+
+
+    def test_max_length_validation(self):
+        """✅ Tag name cannot exceed 50 characters."""
+        data = {"name": "x" * 51}
+        serializer = TagSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("name", serializer.errors)
