@@ -23,3 +23,21 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     permission_classes = [permissions.AllowAny]
+
+
+
+class CompanyProfileViewSet(viewsets.ModelViewSet):
+    queryset = CompanyProfile.objects.select_related("user").all()
+    serializer_class = CompanyProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Employers can only see their own profile
+        if self.request.user.role == 'employer':
+            return self.queryset.filter(user=self.request.user)
+        raise PermissionDenied("Only employers can access their company profile.")
+
+    def perform_create(self, serializer):
+        if self.request.user.role != 'employer':
+            raise PermissionDenied("Only employers can create a company profile.")
+        serializer.save(user=self.request.user)
