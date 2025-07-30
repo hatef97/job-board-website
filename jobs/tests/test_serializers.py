@@ -227,3 +227,107 @@ class JobListSerializerTests(TestCase):
         # Optional fields
         self.assertTrue("created_at" in data)
         self.assertTrue("deadline" in data)
+
+
+
+class JobDetailSerializerTests(TestCase):
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email='employer@example.com', password='securepass', role='employer'
+        )
+        self.category = Category.objects.create(name="Engineering")
+        self.tag1 = Tag.objects.create(name="Python")
+        self.tag2 = Tag.objects.create(name="Remote")
+
+        self.job = Job.objects.create(
+            employer=self.user,
+            title="Backend Dev",
+            description="REST APIs",
+            requirements="Python, DRF",
+            location="Remote",
+            job_type="full_time",
+            experience_level="mid",
+            salary_min=Decimal("4000.00"),
+            salary_max=Decimal("7000.00"),
+            category=self.category,
+            deadline=date.today(),
+            is_active=True
+        )
+        self.job.tags.set([self.tag1])
+
+
+    def test_serialize_job_detail(self):
+        """✅ Serializes job with nested and computed fields correctly."""
+        serializer = JobDetailSerializer(instance=self.job)
+        data = serializer.data
+
+        self.assertEqual(data["title"], "Backend Dev")
+        self.assertEqual(data["employer_email"], self.user.email)
+        self.assertEqual(data["category"]["name"], "Engineering")
+        self.assertEqual(data["tags"][0]["name"], "Python")
+        self.assertNotIn("category_id", data)
+        self.assertNotIn("tag_ids", data)
+
+
+    def test_deserialize_and_create_job(self):
+        """✅ Deserializes input and creates job with M2M (tag_ids) and FK (category_id)."""
+        payload = {
+            "title": "API Engineer",
+            "description": "Build endpoints",
+            "requirements": "DRF, Django",
+            "location": "Hybrid",
+            "job_type": "contract",
+            "experience_level": "senior",
+            "salary_min": "5000.00",
+            "salary_max": "9000.00",
+            "category_id": self.category.id,
+            "tag_ids": [self.tag1.id, self.tag2.id],
+            "deadline": str(date.today())
+        }
+
+        serializer = JobDetailSerializer(data=payload)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        job = serializer.save(employer=self.user)
+
+        self.assertEqual(job.title, "API Engineer")
+        self.assertEqual(job.category, self.category)
+        self.assertIn(self.tag1, job.tags.all())
+        self.assertIn(self.tag2, job.tags.all())
+
+
+    def test_update_job_tags_and_category(self):
+        """✅ Updates a job with new tags and category."""
+        new_category = Category.objects.create(name="DevOps")
+        new_tag = Tag.objects.create(name="Kubernetes")
+
+        payload = {
+            "title": "Updated Title",
+            "tag_ids": [new_tag.id],
+            "category_id": new_category.id
+        }
+
+        serializer = JobDetailSerializer(instance=self.job, data=payload, partial=True)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        job = serializer.save()
+
+        self.assertEqual(job.title, "Updated Title")
+        self.assertEqual(job.category, new_category)
+        self.assertIn(new_tag, job.tags.all())
+        self.assertNotIn(self.tag1, job.tags.all())  # Old tag removed
+
+
+    def test_read_only_fields_not_updated(self):
+        """✅ Ensures read-only fields are not updated."""
+        original_created = self.job.created_at
+        payload = {
+            "created_at": "2000-01-01T00:00:00Z",
+            "updated_at": "2000-01-01T00:00:00Z"
+        }
+
+        serializer = JobDetailSerializer(instance=self.job, data=payload, partial=True)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        job = serializer.save()
+
+        self.assertEqual(job.created_at, original_created)  # Should not change
+        self.assertNotEqual(str(job.updated_at.date()), "2000-01-01")
