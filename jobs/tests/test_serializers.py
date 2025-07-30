@@ -1,4 +1,5 @@
-from django.test import TestCase
+from django.test import TestCase, RequestFactory
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from rest_framework.exceptions import ValidationError
 
@@ -89,3 +90,79 @@ class TagSerializerTests(TestCase):
         serializer = TagSerializer(data=data)
         self.assertFalse(serializer.is_valid())
         self.assertIn("name", serializer.errors)
+
+
+
+class CompanyProfileSerializerTests(TestCase):
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="employer@example.com",
+            password="securepass",
+            role="employer"
+        )
+        self.factory = RequestFactory()
+
+
+    def test_serialize_profile_without_logo(self):
+        """✅ Serializes profile without logo and includes user_email and null logo_url."""
+        profile = CompanyProfile.objects.create(
+            user=self.user,
+            company_name="TechCorp",
+            location="Tehran",
+        )
+        request = self.factory.get("/")
+        serializer = CompanyProfileSerializer(instance=profile, context={"request": request})
+        data = serializer.data
+
+        self.assertEqual(data['user_email'], "employer@example.com")
+        self.assertEqual(data['company_name'], "TechCorp")
+        self.assertIsNone(data['logo_url'])
+
+
+    def test_serialize_profile_with_logo(self):
+        """✅ Serializes profile with logo and returns absolute logo_url."""
+        logo = SimpleUploadedFile("logo.png", b"image-bytes", content_type="image/png")
+        profile = CompanyProfile.objects.create(
+            user=self.user,
+            company_name="PixelSoft",
+            location="NYC",
+            logo=logo
+        )
+        request = self.factory.get("/")
+        serializer = CompanyProfileSerializer(instance=profile, context={"request": request})
+        data = serializer.data
+
+        # Assert logo_url is a full URL and points to company_logos/
+        self.assertIn("http://", data['logo_url'])
+        self.assertIn("company_logos/", data['logo_url'])
+        self.assertIn("logo", data['logo_url']) 
+
+
+    def test_get_logo_url_without_request_context(self):
+        """✅ logo_url is None if context has no request."""
+        logo = SimpleUploadedFile("logo.png", b"image-bytes", content_type="image/png")
+        profile = CompanyProfile.objects.create(
+            user=self.user,
+            company_name="NoRequest Inc.",
+            location="Berlin",
+            logo=logo
+        )
+        serializer = CompanyProfileSerializer(instance=profile)
+        self.assertIsNone(serializer.data['logo_url'])
+
+
+    def test_deserialize_valid_data(self):
+        """✅ Can create a profile from valid data input."""
+        data = {
+            "user": self.user.id,
+            "company_name": "NextGen",
+            "website": "https://nextgen.io",
+            "location": "Toronto",
+            "description": "Future of tech."
+        }
+        serializer = CompanyProfileSerializer(data=data)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        profile = serializer.save()
+        self.assertEqual(profile.company_name, "NextGen")
+        self.assertEqual(profile.user, self.user)
