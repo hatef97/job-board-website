@@ -41,3 +41,29 @@ class CompanyProfileViewSet(viewsets.ModelViewSet):
         if self.request.user.role != 'employer':
             raise PermissionDenied("Only employers can create a company profile.")
         serializer.save(user=self.request.user)
+
+
+
+class JobViewSet(viewsets.ModelViewSet):
+    queryset = Job.objects.select_related("employer", "category").prefetch_related("tags").all()
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.action in ['list']:
+            return JobListSerializer
+        return JobDetailSerializer
+
+    def get_queryset(self):
+        # Public read access
+        if self.request.method in permissions.SAFE_METHODS:
+            return self.queryset.filter(is_active=True)
+
+        # Employers see their own jobs
+        if self.request.user.role == 'employer':
+            return self.queryset.filter(employer=self.request.user)
+        raise PermissionDenied("Only employers can manage jobs.")
+
+    def perform_create(self, serializer):
+        if self.request.user.role != 'employer':
+            raise PermissionDenied("Only employers can post jobs.")
+        serializer.save(employer=self.request.user)
