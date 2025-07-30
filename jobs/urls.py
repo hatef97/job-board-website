@@ -5,7 +5,8 @@ from .views import *
 
 
 router = DefaultRouter()
-router.register('categories', CategoryViewSet)
+router.register(r'categories', CategoryViewSet, basename='categories')
+router.register(r'tags', TagViewSet, basename='tags')
 
 
 
