@@ -54,3 +54,51 @@ class CategoryViewSetTests(APITestCase):
         """✅ Public (unauthenticated) users should access detail view."""
         response = self.client.get(self.detail_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+
+class TagViewSetTests(APITestCase):
+
+    def setUp(self):
+        self.tag1 = Tag.objects.create(name="Remote")
+        self.tag2 = Tag.objects.create(name="Python")
+
+        self.list_url = reverse("tag-list")
+        self.detail_url = reverse("tag-detail", kwargs={"pk": self.tag1.pk})
+
+
+    def test_list_tags(self):
+        """✅ Should return all tags (public access)."""
+        response = self.client.get(self.list_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+
+        tag_names = [tag['name'] for tag in response.data]
+        self.assertIn("Remote", tag_names)
+        self.assertIn("Python", tag_names)
+
+
+    def test_retrieve_single_tag(self):
+        """✅ Should return a specific tag by ID."""
+        response = self.client.get(self.detail_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['name'], "Remote")
+
+
+    def test_nonexistent_tag_returns_404(self):
+        """✅ Should return 404 for invalid tag ID."""
+        url = reverse("tag-detail", kwargs={"pk": 999})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+    def test_tag_list_permission_is_public(self):
+        """✅ Unauthenticated users should access tag list."""
+        response = self.client.get(self.list_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+    def test_tag_detail_permission_is_public(self):
+        """✅ Unauthenticated users should access tag detail."""
+        response = self.client.get(self.detail_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
