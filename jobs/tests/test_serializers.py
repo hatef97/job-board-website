@@ -1,5 +1,9 @@
+from datetime import date, timedelta
+from decimal import Decimal
+
 from django.test import TestCase, RequestFactory
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.utils import timezone
 
 from rest_framework.exceptions import ValidationError
 
@@ -166,3 +170,60 @@ class CompanyProfileSerializerTests(TestCase):
         profile = serializer.save()
         self.assertEqual(profile.company_name, "NextGen")
         self.assertEqual(profile.user, self.user)
+
+
+
+class JobListSerializerTests(TestCase):
+
+    def setUp(self):
+        self.employer = User.objects.create_user(
+            email='employer@example.com', password='securepass', role='employer'
+        )
+        self.category = Category.objects.create(name="Engineering")
+        self.tag1 = Tag.objects.create(name="Python")
+        self.tag2 = Tag.objects.create(name="Remote")
+
+        self.job = Job.objects.create(
+            employer=self.employer,
+            title="Senior Backend Developer",
+            description="Build APIs and services",
+            location="Remote",
+            job_type="full_time",
+            experience_level="senior",
+            salary_min=Decimal("5000.00"),
+            salary_max=Decimal("8000.00"),
+            category=self.category,
+            deadline=date.today() + timedelta(days=30),
+            is_active=True
+        )
+        self.job.tags.set([self.tag1, self.tag2])
+
+
+    def test_job_list_serializer_output(self):
+        """✅ Serializes Job with nested category, tags, and employer_email."""
+        serializer = JobListSerializer(instance=self.job)
+        data = serializer.data
+
+        # Basic fields
+        self.assertEqual(data['title'], "Senior Backend Developer")
+        self.assertEqual(data['location'], "Remote")
+        self.assertEqual(data['job_type'], "full_time")
+        self.assertEqual(data['experience_level'], "senior")
+
+        # Nested category
+        self.assertEqual(data['category']['id'], self.category.id)
+        self.assertEqual(data['category']['name'], "Engineering")
+        self.assertEqual(data['category']['slug'], "engineering")
+
+        # Tags
+        tag_names = [tag['name'] for tag in data['tags']]
+        self.assertIn("Python", tag_names)
+        self.assertIn("Remote", tag_names)
+        self.assertEqual(len(data['tags']), 2)
+
+        # Computed field
+        self.assertEqual(data['employer_email'], self.employer.email)
+
+        # Optional fields
+        self.assertTrue("created_at" in data)
+        self.assertTrue("deadline" in data)
