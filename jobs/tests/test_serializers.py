@@ -159,7 +159,6 @@ class CompanyProfileSerializerTests(TestCase):
     def test_deserialize_valid_data(self):
         """✅ Can create a profile from valid data input."""
         data = {
-            "user": self.user.id,
             "company_name": "NextGen",
             "website": "https://nextgen.io",
             "location": "Toronto",
@@ -167,7 +166,7 @@ class CompanyProfileSerializerTests(TestCase):
         }
         serializer = CompanyProfileSerializer(data=data)
         self.assertTrue(serializer.is_valid(), serializer.errors)
-        profile = serializer.save()
+        profile = serializer.save(user=self.user)  # ✅ pass user here
         self.assertEqual(profile.company_name, "NextGen")
         self.assertEqual(profile.user, self.user)
 
