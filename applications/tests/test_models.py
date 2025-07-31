@@ -3,9 +3,11 @@ import tempfile
 from django.test import TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import IntegrityError
+from django.utils import timezone
+from django.core.exceptions import ValidationError
 
 from jobs.models import Job
-from applications.models import Application
+from applications.models import Application, InterviewSchedule
 from core.models import User, EmployerProfile
 
 
@@ -104,3 +106,101 @@ class ApplicationModelTests(TestCase):
             resume=self.resume
         )
         self.assertTrue(app.resume.name.startswith('resumes/'))
+
+
+
+class InterviewScheduleModelTests(TestCase):
+
+    def setUp(self):
+        # Create users
+        self.applicant = User.objects.create_user(
+            email='applicant@test.com', password='pass1234', role='applicant'
+        )
+        self.employer = User.objects.create_user(
+            email='employer@test.com', password='pass1234', role='employer'
+        )
+
+        # 🚫 Clean up existing profile
+        EmployerProfile.objects.filter(user=self.employer).delete()
+
+        # Create employer profile
+        self.company = EmployerProfile.objects.create(
+            user=self.employer,
+            company_name='TechCorp',
+            company_website='https://techcorp.io',
+            company_description='Innovative Tech Company'
+        )
+
+        # Create job
+        self.job = Job.objects.create(
+            title='Backend Developer',
+            description='Work on APIs and services.',
+            employer=self.employer,
+            location='Berlin'
+        )
+
+        # Create application
+        self.resume = SimpleUploadedFile('resume.pdf', b'resume content')
+        self.application = Application.objects.create(
+            job=self.job,
+            applicant=self.applicant,
+            resume=self.resume
+        )
+
+
+    def test_create_interview_schedule(self):
+        """✅ Successfully creates a valid interview schedule."""
+        interview = InterviewSchedule.objects.create(
+            application=self.application,
+            scheduled_by=self.employer,
+            date=timezone.now() + timezone.timedelta(days=2),
+            location='Zoom',
+            meeting_link='https://zoom.us/meeting/xyz',
+            notes='Initial round'
+        )
+        self.assertIsInstance(interview, InterviewSchedule)
+        self.assertEqual(interview.application, self.application)
+        self.assertEqual(interview.scheduled_by, self.employer)
+        self.assertEqual(interview.location, 'Zoom')
+
+
+    def test_optional_fields_can_be_blank(self):
+        """✅ Optional fields `meeting_link` and `notes` can be blank."""
+        interview = InterviewSchedule.objects.create(
+            application=self.application,
+            scheduled_by=self.employer,
+            date=timezone.now() + timezone.timedelta(days=1),
+            location='Onsite'
+        )
+        self.assertIsNone(interview.meeting_link)
+        self.assertEqual(interview.notes, '')
+
+
+    def test_one_to_one_constraint(self):
+        """❌ Cannot assign two interviews to the same application."""
+        InterviewSchedule.objects.create(
+            application=self.application,
+            scheduled_by=self.employer,
+            date=timezone.now() + timezone.timedelta(days=1),
+            location='Online'
+        )
+        with self.assertRaises(IntegrityError):
+            InterviewSchedule.objects.create(
+                application=self.application,
+                scheduled_by=self.employer,
+                date=timezone.now() + timezone.timedelta(days=3),
+                location='Zoom'
+            )
+
+
+    def test_str_representation(self):
+        """✅ __str__ returns the correct format."""
+        date = timezone.now() + timezone.timedelta(days=1)
+        interview = InterviewSchedule.objects.create(
+            application=self.application,
+            scheduled_by=self.employer,
+            date=date,
+            location='Virtual'
+        )
+        expected = f'Interview for {self.applicant} on {date.strftime("%Y-%m-%d %H:%M")}'
+        self.assertEqual(str(interview), expected)
