@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # Third-party apps
+    'debug_toolbar',
     'rest_framework',
     'rest_framework.authtoken',
     'djoser',
@@ -53,6 +54,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -156,3 +158,8 @@ DJOSER = {
         'current_user': 'core.serializers.UserSerializer',
     }
 }
+
+INTERNAL_IPS = [
+    "127.0.0.1",
+    "localhost",
+]
