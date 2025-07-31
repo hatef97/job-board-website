@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     # My apps
     'core',
     'jobs',
+    'applications',
 ]
 
 MIDDLEWARE = [
