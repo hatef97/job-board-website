@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 
 from jobs.models import Job
-from applications.models import Application, InterviewSchedule
+from applications.models import Application, InterviewSchedule, ApplicantNote
 from core.models import User, EmployerProfile
 
 
@@ -204,3 +204,113 @@ class InterviewScheduleModelTests(TestCase):
         )
         expected = f'Interview for {self.applicant} on {date.strftime("%Y-%m-%d %H:%M")}'
         self.assertEqual(str(interview), expected)
+
+
+
+class ApplicantNoteModelTests(TestCase):
+
+    def setUp(self):
+        # Create users
+        self.applicant = User.objects.create_user(
+            email='applicant@test.com', password='pass1234', role='applicant'
+        )
+        self.employer = User.objects.create_user(
+            email='employer@test.com', password='pass1234', role='employer'
+        )
+
+        # Ensure test isolation
+        EmployerProfile.objects.filter(user=self.employer).delete()
+
+        # Create employer profile
+        self.company = EmployerProfile.objects.create(
+            user=self.employer,
+            company_name='FutureTech',
+            company_website='https://futuretech.io',
+            company_description='Innovating tomorrow'
+        )
+
+        # Create job
+        self.job = Job.objects.create(
+            title='Backend Engineer',
+            description='Develop APIs and backend services.',
+            employer=self.employer,
+            location='Remote'
+        )
+
+        # Resume file
+        self.resume = SimpleUploadedFile('resume.pdf', b'%PDF-resume')
+
+        # Create application
+        self.application = Application.objects.create(
+            job=self.job,
+            applicant=self.applicant,
+            resume=self.resume,
+            cover_letter="Excited to join."
+        )
+
+
+    def test_create_note_successfully(self):
+        """✅ Can create a note for an application."""
+        note = ApplicantNote.objects.create(
+            application=self.application,
+            author=self.employer,
+            note="Strong portfolio and relevant experience."
+        )
+        self.assertEqual(note.application, self.application)
+        self.assertEqual(note.author, self.employer)
+        self.assertEqual(note.note, "Strong portfolio and relevant experience.")
+        self.assertIsNotNone(note.created_at)
+
+
+    def test_str_representation(self):
+        """✅ __str__ should include author and applicant email."""
+        note = ApplicantNote.objects.create(
+            application=self.application,
+            author=self.employer,
+            note="Excellent communication skills."
+        )
+        expected = f"Note by {self.employer} for {self.applicant}"
+        self.assertEqual(str(note), expected)
+
+
+    def test_ordering_by_created_at_desc(self):
+        """✅ Notes should be ordered by most recent first."""
+        old_note = ApplicantNote.objects.create(
+            application=self.application,
+            author=self.employer,
+            note="First impression: solid."
+        )
+        old_note.created_at = timezone.now() - timezone.timedelta(days=1)
+        old_note.save()
+
+        new_note = ApplicantNote.objects.create(
+            application=self.application,
+            author=self.employer,
+            note="Follow-up: confirmed interest."
+        )
+
+        notes = list(ApplicantNote.objects.filter(application=self.application))
+        self.assertEqual(notes[0], new_note)
+        self.assertEqual(notes[1], old_note)
+
+
+    def test_note_cascade_delete_with_application(self):
+        """✅ Deleting the application should delete its notes."""
+        note = ApplicantNote.objects.create(
+            application=self.application,
+            author=self.employer,
+            note="Will recommend for interview."
+        )
+        self.application.delete()
+        self.assertFalse(ApplicantNote.objects.filter(id=note.id).exists())
+
+
+    def test_note_cascade_delete_with_user(self):
+        """✅ Deleting the author should delete their notes."""
+        note = ApplicantNote.objects.create(
+            application=self.application,
+            author=self.employer,
+            note="Final comment."
+        )
+        self.employer.delete()
+        self.assertFalse(ApplicantNote.objects.filter(id=note.id).exists())
