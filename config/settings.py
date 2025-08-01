@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'core',
     'jobs',
     'applications',
+    'recruitment',
 ]
 
 MIDDLEWARE = [
