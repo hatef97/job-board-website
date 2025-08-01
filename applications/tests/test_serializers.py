@@ -189,3 +189,75 @@ class InterviewScheduleSerializerTests(TestCase):
         serializer = InterviewScheduleSerializer(data=data, context=self.context)
         self.assertTrue(serializer.is_valid())
         self.assertEqual(serializer.validated_data['scheduled_by'], self.employer)
+
+
+
+class ApplicantNoteSerializerTests(TestCase):
+
+    def setUp(self):
+        self.factory = RequestFactory()
+
+        self.employer = User.objects.create_user(username='employer1', email='employer1@gmail.com', password='testpass', role='employer')
+        self.applicant = User.objects.create_user(username='applicant1', email='applicant1@gmail.com', password='pass', role='applicant')
+
+        self.job = Job.objects.create(
+            title='Full Stack Dev',
+            description='Build web apps',
+            location='Remote',
+            employer=self.employer,
+        )
+
+        self.application = Application.objects.create(
+            job=self.job,
+            applicant=self.applicant,
+            resume=SimpleUploadedFile("cv.pdf", b"%PDF test", content_type="application/pdf"),
+            cover_letter="Hire me"
+        )
+
+        self.context = {'request': self._get_request(self.employer)}
+
+
+    def _get_request(self, user):
+        request = self.factory.post('/fake-url/')
+        request.user = user
+        return request
+
+
+    def test_create_valid_note(self):
+        """✅ It should serialize and create a valid applicant note."""
+        data = {
+            'application': self.application.id,
+            'note': 'Promising candidate with good experience.'
+        }
+        serializer = ApplicantNoteSerializer(data=data, context=self.context)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+        note = serializer.save()
+        self.assertEqual(note.application, self.application)
+        self.assertEqual(note.author, self.employer)
+        self.assertEqual(note.note, data['note'])
+
+
+    def test_author_is_set_from_context(self):
+        """🔒 The author field should be set automatically from the request user."""
+        data = {
+            'application': self.application.id,
+            'note': 'Follows up promptly.'
+        }
+        serializer = ApplicantNoteSerializer(data=data, context=self.context)
+        self.assertTrue(serializer.is_valid())
+        self.assertEqual(serializer.validated_data['author'], self.employer)
+
+
+    def test_read_only_fields_are_present(self):
+        """🧠 The summary fields (job title, applicant) should be present in serialized output."""
+        note = ApplicantNote.objects.create(
+            application=self.application,
+            author=self.employer,
+            note='Detail-oriented and skilled.'
+        )
+        serializer = ApplicantNoteSerializer(note)
+
+        self.assertEqual(serializer.data['job_title'], self.job.title)
+        self.assertEqual(serializer.data['applicant_username'], self.applicant.username)
+        self.assertIn('created_at', serializer.data)
