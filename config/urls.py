@@ -7,10 +7,11 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('auth/', include('djoser.urls')),  # 👈 registration, activation, reset, etc.
-    path('auth/', include('djoser.urls.authtoken')),  # 👈 login/logout using tokens
-    path('core/', include('core.urls')),
+    path('api/auth/', include('djoser.urls')),  # 👈 registration, activation, reset, etc.
+    path('api/auth/', include('djoser.urls.authtoken')),  # 👈 login/logout using tokens
+    path('api/core/', include('core.urls')),
     path('jobs/', include('jobs.urls')),
+    path('api/recruitment/', include('recruitment.urls')),
 ]
 
 if settings.DEBUG:
