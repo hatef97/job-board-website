@@ -49,8 +49,6 @@ INSTALLED_APPS = [
     'djoser',
     # My apps
     'core',
-    'jobs',
-    'applications',
     'recruitment',
 ]
 
