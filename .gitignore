@@ -15,7 +15,6 @@ migrations/
 
 # Ignore Django static and media files
 staticfiles/
-media/
 
 # Ignore VSCode and JetBrains IDE settings
 .vscode/
