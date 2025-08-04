@@ -23,7 +23,7 @@ class ApplicationSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
         ]
-        read_only_fields = ['status', 'created_at', 'updated_at']
+        read_only_fields = ['status', 'created_at', 'updated_at', 'applicant']
 
     def validate(self, data):
         job = data.get('job')

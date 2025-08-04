@@ -17,4 +17,7 @@ class ApplicationViewSet(viewsets.ModelViewSet):
         return Application.objects.filter(applicant=user).select_related('job')
 
     def perform_create(self, serializer):
+        if self.request.user.role != 'applicant':
+            raise PermissionDenied("Only applicants can submit applications.")
         serializer.save(applicant=self.request.user)
+        
