@@ -27,3 +27,5 @@ config/settings/local.py
 
 resumes
 company_logos
+
+.env.docker
